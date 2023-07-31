@@ -150,14 +150,17 @@ def show_exam_result(request, course_id, submission_id):
     course = get_object_or_404(Course, pk=course_id)
     submission = get_object_or_404(Submission, pk=submission_id, enrollment__user=request.user)
 
-    selected_choice_ids = submission.choices.values_list('id', flat=True)
+    selected_choices = submission.choices.all()
     total_score = 0
+    question_results = {}  # To store whether each question is correct or not
 
     for question in course.question_set.all():
+        correct_choices = question.choice_set.filter(is_correct=True)
+        selected_correct_choices = selected_choices.filter(question=question, is_correct=True)
+
         # Check if the selected choices are correct and calculate the score
-        selected_choices = set(selected_choice_ids)
-        correct_choices = set(question.correct_choices.values_list('id', flat=True))
-        is_correct = selected_choices == correct_choices
+        is_correct = set(selected_correct_choices) == set(correct_choices)
+        question_results[question] = is_correct
 
         # If the selected choices are correct, increment the total score
         if is_correct:
@@ -165,8 +168,7 @@ def show_exam_result(request, course_id, submission_id):
 
     context = {
         'course': course,
-        'selected_choice_ids': selected_choice_ids,
         'total_score': total_score,
+        'question_results': question_results,
     }
-    return render(request, 'onlinecourse/exam_result_bootsrap.html', context)
-
+    return render(request, 'onlinecourse/exam_result_bootstrap.html', context)
